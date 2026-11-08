@@ -17,4 +17,5 @@ Download the zip for your system from the **Releases** page.
 
 ## Build
 `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release`
+On Windows, install the WebView2 SDK first (`nuget install Microsoft.Web.WebView2 -OutputDirectory nuget`) and add `-DJUCE_WEBVIEW2_PACKAGE_LOCATION=nuget`.
 CI builds both platforms on every push (see `.github/workflows/build.yml`).

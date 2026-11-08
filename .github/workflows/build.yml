@@ -1,0 +1,63 @@
+name: build
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --target Wings_VST3 --parallel
+      - name: Package
+        shell: pwsh
+        run: |
+          $vst3 = Get-ChildItem -Path build -Recurse -Directory -Filter "*.vst3" | Select-Object -First 1
+          Write-Host "Found: $($vst3.FullName)"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path $vst3.FullName -DestinationPath dist/wings-v1.0-windows-vst3.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wings-windows-vst3
+          path: dist/wings-v1.0-windows-vst3.zip
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --target Wings_VST3 Wings_AU --parallel
+      - name: Package
+        run: |
+          mkdir -p dist/pkg
+          find build -name "*.vst3" -maxdepth 6 -type d -exec cp -R {} dist/pkg/ \;
+          find build -name "*.component" -maxdepth 6 -type d -exec cp -R {} dist/pkg/ \;
+          ls -la dist/pkg
+          cd dist/pkg && ditto -c -k --keepParent . ../wings-v1.0-macos.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wings-macos
+          path: dist/wings-v1.0-macos.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true

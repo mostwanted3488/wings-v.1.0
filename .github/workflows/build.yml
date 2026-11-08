@@ -52,7 +52,7 @@ jobs:
           path: dist/wings-v1.0-macos.zip
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     needs: [windows, macos]
     runs-on: ubuntu-latest
     permissions:
@@ -64,5 +64,7 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.0.0' }}
+          name: wings v1.0
           files: dist/*.zip
           generate_release_notes: true
